@@ -5,7 +5,7 @@ services:
     image: postgres:16-alpine
     environment:
       POSTGRES_USER: managarr
-      POSTGRES_PASSWORD: managarr
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
       POSTGRES_DB: managarr
     volumes:
       - pgdata:/var/lib/postgresql/data

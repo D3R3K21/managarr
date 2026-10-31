@@ -99,7 +99,8 @@ def login(body: LoginBody, session: Session = Depends(get_session)):
     row = session.exec(select(User).where(User.username == uname)).first()
     if row and row.is_active and verify_password(body.password, row.password_hash):
         return {"token": make_token(row.username, row.role), "username": row.username, "role": row.role}
-    if uname == settings.ADMIN_USERNAME.strip().lower() and body.password == settings.ADMIN_PASSWORD:
+    if (settings.ADMIN_PASSWORD and uname == settings.ADMIN_USERNAME.strip().lower()
+            and secrets.compare_digest(body.password or "", settings.ADMIN_PASSWORD)):
         return {"token": make_token(settings.ADMIN_USERNAME, "admin"),
                 "username": settings.ADMIN_USERNAME, "role": "admin"}
     raise HTTPException(401, "bad credentials")

@@ -36,7 +36,7 @@ pipeline, importer, metadata, and library tools.
 ## Quick start (Docker Compose)
 
 ```bash
-cp .env.example .env              # set JWT_SECRET, ADMIN_PASSWORD, API keys, qBittorrent creds
+cp .env.example .env              # set POSTGRES_PASSWORD, DATABASE_URL, JWT_SECRET, ADMIN_PASSWORD, API keys
 $EDITOR docker-compose.yml        # point the volume mounts at your library folders
 docker compose up -d --build
 ```
@@ -59,8 +59,8 @@ URL set (Plex, Audiobookshelf, Radarr, ntfy, Mousehole) is disabled. Many runtim
 # backend
 cd backend && python -m venv .venv && . .venv/bin/activate
 pip install -r requirements.txt
-DATABASE_URL=postgresql+psycopg://managarr:managarr@localhost:5432/managarr \
-  uvicorn app.main:app --reload --port 8000
+export DATABASE_URL=...   # postgresql+psycopg://USER:PASSWORD@localhost:5432/managarr
+uvicorn app.main:app --reload --port 8000
 
 # frontend (proxies /api to :8000)
 cd frontend && npm install && npm run dev

@@ -16,11 +16,11 @@ class Settings:
     # ── Core ────────────────────────────────────────────────────────────────
     DATABASE_URL: str = os.getenv(
         "DATABASE_URL",
-        "postgresql+psycopg://managarr:managarr@localhost:5432/managarr",
+        "postgresql+psycopg://managarr@localhost:5432/managarr",
     )
     JWT_SECRET: str = os.getenv("JWT_SECRET", "dev-insecure-change-me")
     ADMIN_USERNAME: str = os.getenv("ADMIN_USERNAME", "admin")
-    ADMIN_PASSWORD: str = os.getenv("ADMIN_PASSWORD", "managarr")  # overridden by secret
+    ADMIN_PASSWORD: str = os.getenv("ADMIN_PASSWORD", "")  # required: set via env
     TZ: str = os.getenv("TZ", "UTC")
     LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")
 
