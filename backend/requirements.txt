@@ -1,0 +1,11 @@
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+sqlmodel==0.0.22
+psycopg[binary]==3.2.3
+httpx==0.28.1
+PyJWT==2.10.1
+APScheduler==3.11.0
+croniter==5.0.1
+python-multipart==0.0.20
+anyio==4.7.0
+smbprotocol==1.17.0

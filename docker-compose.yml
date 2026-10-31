@@ -1,0 +1,30 @@
+# Minimal example: Managarr + Postgres. Point the volume mounts at your own
+# library/download folders, and set QBT_HOST etc. in .env.
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: managarr
+      POSTGRES_PASSWORD: managarr
+      POSTGRES_DB: managarr
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  managarr:
+    build: .
+    env_file: .env
+    depends_on: [postgres]
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./config:/config
+      - /path/to/movies:/movies
+      - /path/to/new-movies:/new-movies
+      - /path/to/tv:/tv
+      - /path/to/audiobooks:/audiobooks
+      - /path/to/downloads:/downloads
+    restart: unless-stopped
+
+volumes:
+  pgdata:

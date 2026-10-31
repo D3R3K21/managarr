@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+node_modules/
+frontend/dist/
+*.db
+*.sqlite
+.DS_Store
+deploy/*.secret.yaml
+deploy/rendered/
+.env
