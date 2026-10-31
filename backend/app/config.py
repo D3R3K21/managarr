@@ -5,22 +5,71 @@ Secrets (api keys, tokens) have no defaults.
 from __future__ import annotations
 
 import os
+import secrets
 from functools import lru_cache
+from urllib.parse import quote_plus
 
 
 def _b(name: str, default: bool = False) -> bool:
     return os.getenv(name, str(default)).lower() in ("1", "true", "yes", "on")
 
 
+CONFIG_DIR: str = os.getenv("CONFIG_DIR", "/config")
+
+
+def _database_url() -> str:
+    """DATABASE_URL wins if set; otherwise build it from the POSTGRES_* parts."""
+    url = os.getenv("DATABASE_URL", "").strip()
+    if url:
+        return url
+    user = quote_plus(os.getenv("POSTGRES_USER", "managarr"))
+    pw = os.getenv("POSTGRES_PASSWORD", "")
+    auth = f"{user}:{quote_plus(pw)}" if pw else user
+    host = os.getenv("POSTGRES_HOST", "localhost")
+    port = os.getenv("POSTGRES_PORT", "5432")
+    db = os.getenv("POSTGRES_DB", "managarr")
+    return f"postgresql+psycopg://{auth}@{host}:{port}/{db}"
+
+
+def _persisted_secret(env: str, filename: str, nbytes: int) -> tuple[str, bool]:
+    """Return (value, generated). Env wins; otherwise reuse or create a random value
+    in CONFIG_DIR so it survives restarts. Falls back to an in-memory value when
+    CONFIG_DIR isn't writable. `generated` is True only when newly created."""
+    val = os.getenv(env, "").strip()
+    if val:
+        return val, False
+    path = os.path.join(CONFIG_DIR, filename)
+    try:
+        with open(path) as f:
+            existing = f.read().strip()
+        if existing:
+            return existing, False
+    except OSError:
+        pass
+    val = secrets.token_urlsafe(nbytes)
+    try:
+        os.makedirs(CONFIG_DIR, exist_ok=True)
+        fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+        with os.fdopen(fd, "w") as f:
+            f.write(val + "\n")
+    except OSError:
+        pass
+    return val, True
+
+
+_JWT_SECRET, _ = _persisted_secret("JWT_SECRET", ".jwt_secret", 48)
+_ADMIN_PASSWORD, _ADMIN_PASSWORD_GENERATED = _persisted_secret("ADMIN_PASSWORD", "admin_password", 12)
+
+
 class Settings:
     # ── Core ────────────────────────────────────────────────────────────────
-    DATABASE_URL: str = os.getenv(
-        "DATABASE_URL",
-        "postgresql+psycopg://managarr@localhost:5432/managarr",
-    )
-    JWT_SECRET: str = os.getenv("JWT_SECRET", "dev-insecure-change-me")
+    DATABASE_URL: str = _database_url()
+    CONFIG_DIR: str = CONFIG_DIR
+    # Unset => random, generated on first run and kept in CONFIG_DIR.
+    JWT_SECRET: str = _JWT_SECRET
     ADMIN_USERNAME: str = os.getenv("ADMIN_USERNAME", "admin")
-    ADMIN_PASSWORD: str = os.getenv("ADMIN_PASSWORD", "")  # required: set via env
+    ADMIN_PASSWORD: str = _ADMIN_PASSWORD
+    ADMIN_PASSWORD_GENERATED: bool = _ADMIN_PASSWORD_GENERATED
     TZ: str = os.getenv("TZ", "UTC")
     LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")
 
@@ -102,8 +151,8 @@ class Settings:
 
     # ── Notifications (ntfy) ──────────────────────────────────────────────────
     # Optional external scheduled-jobs registry (see app/scheduler/registry.py). Unset = no reporting.
-    CLAUTO_JOBS_URL: str = os.getenv("CLAUTO_JOBS_URL", "")
-    CLAUTO_JOBS_TOKEN: str = os.getenv("CLAUTO_JOBS_TOKEN", "")
+    JOBS_REGISTRY_URL: str = os.getenv("JOBS_REGISTRY_URL", "")
+    JOBS_REGISTRY_TOKEN: str = os.getenv("JOBS_REGISTRY_TOKEN", "")
     NTFY_URL: str = os.getenv("NTFY_URL", "")
     NTFY_TOPIC: str = os.getenv("NTFY_TOPIC", "managarr")
     NTFY_TOKEN: str = os.getenv("NTFY_TOKEN", "")
@@ -137,7 +186,7 @@ class Settings:
 
     ENABLE_SCHEDULER: bool = _b("ENABLE_SCHEDULER", True)
     ENABLE_MCP: bool = _b("ENABLE_MCP", True)
-    SCRIPTS_DIR: str = os.getenv("SCRIPTS_DIR", "/config/scripts")
+    SCRIPTS_DIR: str = os.getenv("SCRIPTS_DIR", os.path.join(CONFIG_DIR, "scripts"))
 
 
 @lru_cache

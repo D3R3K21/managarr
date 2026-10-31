@@ -36,22 +36,40 @@ pipeline, importer, metadata, and library tools.
 ## Quick start (Docker Compose)
 
 ```bash
-cp .env.example .env              # set POSTGRES_PASSWORD, DATABASE_URL, JWT_SECRET, ADMIN_PASSWORD, API keys
-$EDITOR docker-compose.yml        # point the volume mounts at your library folders
 docker compose up -d --build
+docker compose logs managarr | grep "generated"    # first-run admin password
 ```
 
-Open http://localhost:8000 and sign in with `ADMIN_USERNAME` / `ADMIN_PASSWORD`.
-
-For hardlink imports to work, the downloads and library folders must sit on the same
-filesystem, mounted at the same paths in both Managarr and qBittorrent.
+Open http://localhost:8000 and log in as `admin` with the password from the logs
+(also saved to `data/config/admin_password`). That's all it takes to try it: Postgres is
+bundled, and library/download folders default to `./data/*`.
 
 ## Configuration
 
-Everything is set through environment variables; `.env.example` lists them all with
-comments, and `backend/app/config.py` is the source of truth. Any integration with no
-URL set (Plex, Audiobookshelf, Radarr, ntfy, Mousehole) is disabled. Many runtime settings
-(download limits, queue behaviour, etc.) can also be changed on the **Settings** page.
+All settings live in one env file:
+
+```bash
+cp .env.example .env
+$EDITOR .env
+docker compose up -d
+```
+
+`.env.example` lists every setting with its default and a comment. Anything you leave
+out keeps its default. The ones you'll usually set:
+
+| Setting | What it's for |
+|---|---|
+| `MOVIES_DIR`, `TV_DIR`, `AUDIOBOOKS_DIR`, `DOWNLOADS_DIR`, … | Host folders to mount. Keep downloads and libraries on one filesystem so imports can hardlink. |
+| `POSTGRES_PASSWORD` | Database password, used by both containers. Set it **before** first start: Postgres stores it in its volume. |
+| `ADMIN_USERNAME` / `ADMIN_PASSWORD` | Built-in admin login. With no password set, one is generated on first start. |
+| `QBT_HOST`, `QBT_USERNAME`, `QBT_PASSWORD` | qBittorrent Web UI. |
+| `TMDB_API_KEY`, `TVDB_API_KEY` | Movie/TV metadata. |
+| `PLEX_URL`/`PLEX_TOKEN`, `ABS_URL`/`ABS_TOKEN`, `NTFY_URL` | Optional integrations; blank = off. |
+
+`JWT_SECRET` is generated and kept in the config folder if you don't set one. To use your
+own Postgres, set `POSTGRES_HOST`/`POSTGRES_PORT` (or a full `DATABASE_URL`) and run the
+image without the bundled `postgres` service. Many runtime options (download limits, queue
+behaviour) can also be changed on the **Settings** page.
 
 ## Development
 
@@ -59,7 +77,7 @@ URL set (Plex, Audiobookshelf, Radarr, ntfy, Mousehole) is disabled. Many runtim
 # backend
 cd backend && python -m venv .venv && . .venv/bin/activate
 pip install -r requirements.txt
-export DATABASE_URL=...   # postgresql+psycopg://USER:PASSWORD@localhost:5432/managarr
+export POSTGRES_HOST=localhost POSTGRES_PASSWORD=... CONFIG_DIR=./data/config
 uvicorn app.main:app --reload --port 8000
 
 # frontend (proxies /api to :8000)

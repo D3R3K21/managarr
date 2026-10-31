@@ -53,6 +53,10 @@ def _mount_routers(app: FastAPI) -> None:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    if settings.ADMIN_PASSWORD_GENERATED:
+        log.warning("No ADMIN_PASSWORD set — generated one. Log in as '%s' with password: %s "
+                    "(saved in %s/admin_password; set ADMIN_PASSWORD to override)",
+                    settings.ADMIN_USERNAME, settings.ADMIN_PASSWORD, settings.CONFIG_DIR)
     init_db()
     # Seed defaults (indexers, quality profiles, root folders) if empty.
     try:

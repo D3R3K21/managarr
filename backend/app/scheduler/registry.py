@@ -8,8 +8,8 @@ tab here shows the system jobs that matter to Managarr (tag ``managarr``:
 the media image auto-updater, the qBittorrent missing-files fixer, the
 Libation scan).
 
-The registry is an external HTTP service (``CLAUTO_JOBS_URL``), reached
-with a token that can only touch ``/api/jobs*`` (``CLAUTO_JOBS_TOKEN``). Both
+The registry is an external HTTP service (``JOBS_REGISTRY_URL``), reached
+with a token that can only touch ``/api/jobs*`` (``JOBS_REGISTRY_TOKEN``). Both
 unset => everything here is a silent no-op. Reporting is best-effort and
 fire-and-forget on a worker thread: a registry outage must never slow down or
 fail a Managarr job.
@@ -60,12 +60,12 @@ EXTRA_TAGS = {
 
 
 def configured() -> bool:
-    return bool(settings.CLAUTO_JOBS_URL and settings.CLAUTO_JOBS_TOKEN)
+    return bool(settings.JOBS_REGISTRY_URL and settings.JOBS_REGISTRY_TOKEN)
 
 
 def _client(timeout: float = 5.0) -> httpx.Client:
-    return httpx.Client(base_url=settings.CLAUTO_JOBS_URL.rstrip("/"), timeout=timeout,
-                        headers={"Authorization": f"Bearer {settings.CLAUTO_JOBS_TOKEN}"})
+    return httpx.Client(base_url=settings.JOBS_REGISTRY_URL.rstrip("/"), timeout=timeout,
+                        headers={"Authorization": f"Bearer {settings.JOBS_REGISTRY_TOKEN}"})
 
 
 def _bg(fn, *args) -> None:

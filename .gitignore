@@ -10,3 +10,4 @@ frontend/dist/
 deploy/*.secret.yaml
 deploy/rendered/
 .env
+data/

@@ -1,29 +1,47 @@
-# Minimal example: Managarr + Postgres. Point the volume mounts at your own
-# library/download folders, and set QBT_HOST etc. in .env.
+# Managarr + PostgreSQL. Works as-is (`docker compose up -d --build`); to
+# configure, `cp .env.example .env` and edit. All settings live in .env.
 services:
   postgres:
     image: postgres:16-alpine
     environment:
-      POSTGRES_USER: managarr
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
-      POSTGRES_DB: managarr
+      POSTGRES_USER: ${POSTGRES_USER:-managarr}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-managarr}
+      POSTGRES_DB: ${POSTGRES_DB:-managarr}
     volumes:
       - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
     restart: unless-stopped
 
   managarr:
     build: .
-    env_file: .env
-    depends_on: [postgres]
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      # Compose wiring; these override .env so the app always finds the bundled DB.
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: "5432"
+      POSTGRES_USER: ${POSTGRES_USER:-managarr}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-managarr}
+      POSTGRES_DB: ${POSTGRES_DB:-managarr}
+      CONFIG_DIR: /config
+    depends_on:
+      postgres:
+        condition: service_healthy
     ports:
-      - "8000:8000"
+      - "${MANAGARR_PORT:-8000}:8000"
     volumes:
-      - ./config:/config
-      - /path/to/movies:/movies
-      - /path/to/new-movies:/new-movies
-      - /path/to/tv:/tv
-      - /path/to/audiobooks:/audiobooks
-      - /path/to/downloads:/downloads
+      - ${CONFIG_DIR_HOST:-./data/config}:/config
+      - ${MOVIES_DIR:-./data/movies}:/movies
+      - ${NEW_MOVIES_DIR:-./data/new-movies}:/new-movies
+      - ${TV_DIR:-./data/tv}:/tv
+      - ${AUDIOBOOKS_DIR:-./data/audiobooks}:/audiobooks
+      - ${DOWNLOADS_DIR:-./data/downloads}:/downloads
+      - ${LIBATION_DIR:-./data/libation}:/db
     restart: unless-stopped
 
 volumes:
